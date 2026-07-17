@@ -39,6 +39,8 @@ def process_silver(year, month):
 
     # duração > 6h (360 min) = anomalia / distancia > 100 milhas = anomalia / datas inconsistentes (dropoff antes de pickup)
     # pagamento inválido (nao é 1 ou 2) = receita inválida ou tipo inválido / distancia negativa ou valor negativo
+    # quant passageiros menor/igual a 0 ou maior que 8 / ID de tarifa fora das mapeadas pela TLC (1 a 6
+    #local de embarque invalido (TLC Zone IDs vão de 1 a 265) / local de desembarque inválido (fora do intervalo 1 a 265)
     
     
     errors_expr = F.array([
@@ -47,7 +49,11 @@ def process_silver(year, month):
         F.when(~F.col("payment_type").isin(1, 2), "invalid_payment_type"),
         F.when(F.col("tpep_dropoff_datetime") <= F.col("tpep_pickup_datetime"), "invalid_dates_dropoff_before_pickup"),
         F.when(F.col("trip_distance") < 0, "negative_distance"),
-        F.when(F.col("total_amount") < 0, "negative_total_amount")
+        F.when(F.col("total_amount") < 0, "negative_total_amount"),
+        F.when(F.col("passenger_count").isNull() | (F.col("passenger_count") <= 0) | (F.col("passenger_count") > 8), "invalid_passenger_count"),
+        F.when(F.col("RatecodeID").isNull() | ~F.col("RatecodeID").between(1, 6), "invalid_ratecode_id"),
+        F.when(F.col("PULocationID").isNull() | ~F.col("PULocationID").between(1, 265), "invalid_pickup_location"),
+        F.when(F.col("DOLocationID").isNull() | ~F.col("DOLocationID").between(1, 265), "invalid_dropoff_location")
     ])
     
     # remover nulos do array de erros e concatenar
