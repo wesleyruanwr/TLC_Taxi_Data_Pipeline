@@ -7,6 +7,7 @@ sources:
       - name: trips
         columns:
           - name: VendorID
+            quote: true
             tests:
               - not_null
           - name: tpep_pickup_datetime
@@ -90,7 +91,7 @@ models:
           - not_null
 
   - name: dim_vendors
-    description: "tabela dimensao com os provedores de tecnologia dos táxis."
+    description: "Tabela dimensão com os provedores de tecnologia dos táxis."
     columns:
       - name: vendor_id
         tests:
@@ -101,7 +102,7 @@ models:
           - not_null
 
   - name: dim_rate_codes
-    description: "tabela dimensao com os tipos de tarifa das corridas."
+    description: "Tabela dimensão com os tipos de tarifa das corridas."
     columns:
       - name: rate_code_id
         tests:
@@ -112,7 +113,7 @@ models:
           - not_null
 
   - name: mv_monthly_indicators
-    description: "view materializada com indicadores mensais por total de corridas, valor total valido, ticket medio e distancia media."
+    description: "View materializada com indicadores mensais agregados por total de corridas, valor total valido, ticket medio e distancia media."
     columns:
       - name: month_yyyymm
         tests:
