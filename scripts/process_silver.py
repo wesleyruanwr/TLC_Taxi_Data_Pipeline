@@ -4,7 +4,7 @@ from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql.types import StringType, BooleanType
 
-# credenciais lidas do ambiente (injetadas via docker-compose a partir do .env)
+# credenciais lidas do ambiente
 DB_USER     = os.environ.get("POSTGRES_USER", "postgres")
 DB_PASSWORD = os.environ.get("POSTGRES_PASSWORD", "postgres")
 DB_NAME     = os.environ.get("NY_TAXI_DB_NAME", "ny_taxi")
@@ -30,11 +30,11 @@ def process_silver(year, month):
 
     df = spark.read.parquet(bronze_path)
 
-    # colunas de data e competência mensal
+    # colunas de data e competencia mensal
     df = df.withColumn("pickup_date", F.to_date("tpep_pickup_datetime"))
     df = df.withColumn("pickup_year_month", F.date_format("tpep_pickup_datetime", "yyyyMM"))
 
-    # calcular duração da viagem
+    # calcular durcao da viagem
     df = df.withColumn("trip_duration_minutes", 
                        (F.unix_timestamp("tpep_dropoff_datetime") - F.unix_timestamp("tpep_pickup_datetime")) / 60.0)
 

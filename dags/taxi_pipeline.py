@@ -4,8 +4,8 @@ from airflow import DAG
 from airflow.operators.bash import BashOperator
 from airflow.models.param import Param
 
-# parametros para execucao manual — quando acionado via trigger, usa esses valores
-# quando rodado automaticamente pelo scheduler, o ano/mes sao derivados da data logica de execucao
+# parametros para execucao manual — quando acionado via trigger usa esses valores
+# quando rodado automaticamente pelo scheduler o ano/mes sao derivados da data logica de execucao
 default_params = {
     "year": Param("2025", type="string", description="ano do processamento (ex: 2025) — usado apenas em trigger manual"),
     "month": Param("1", type="string", description="mes do processamento (1 a 12) — usado apenas em trigger manual")
@@ -31,9 +31,8 @@ with DAG(
     max_active_runs=1
 ) as dag:
 
-    # se a dag for disparada manualmente (external_trigger=True), usa os params informados
-    # se rodar pelo scheduler automaticamente, deriva o ano/mes da data logica de execucao
-    # garantindo incrementalidade real na execucao semanal
+    # se  for disparada manualmente (external_trigger=True) usa os params informados
+    # se rodar pelo scheduler automaticamente deriva o ano/mes da data logica de execucao
     _year  = "{{ params.year  if dag_run.external_trigger else logical_date.strftime('%Y') }}"
     _month = "{{ params.month if dag_run.external_trigger else logical_date.strftime('%-m') }}"
 
