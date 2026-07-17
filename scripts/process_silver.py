@@ -1,8 +1,9 @@
 import sys
 import os
+import psycopg2
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
-from pyspark.sql.types import StringType, BooleanType
+from pyspark.sql.types import StringType
 
 # credenciais lidas do ambiente
 DB_USER     = os.environ.get("POSTGRES_USER", "postgres")
@@ -11,6 +12,7 @@ DB_NAME     = os.environ.get("NY_TAXI_DB_NAME", "ny_taxi")
 
 def process_silver(year, month):
     month_str = f"{int(month):02d}"
+    source_year_month = f"{year}{month_str}"
     filename = f"yellow_tripdata_{year}-{month_str}.parquet"
     bronze_path = os.path.join("/opt/airflow/data", "bronze", filename)
     
@@ -29,6 +31,7 @@ def process_silver(year, month):
         .getOrCreate()
 
     df = spark.read.parquet(bronze_path)
+    df = df.withColumn("source_year_month", F.lit(source_year_month))
 
     # colunas de data e competencia mensal
     df = df.withColumn("pickup_date", F.to_date("tpep_pickup_datetime"))
@@ -85,6 +88,7 @@ def process_silver(year, month):
         "total_amount",
         "congestion_surcharge",
         "Airport_fee",
+        "source_year_month",
         "pickup_date",
         "pickup_year_month",
         "trip_duration_minutes",
@@ -108,6 +112,8 @@ def process_silver(year, month):
     print(f" - Gravando viagens rejeitadas em bronze.rejected_trips")
     
     try:
+        delete_existing_batch(source_year_month)
+
         # Grava apenas as válidas na Silver
         valid_df.write \
             .mode("append") \
@@ -124,6 +130,47 @@ def process_silver(year, month):
         raise e
     finally:
         spark.stop()
+
+def delete_existing_batch(source_year_month):
+    conn = psycopg2.connect(
+        host="postgres",
+        port=5432,
+        dbname=DB_NAME,
+        user=DB_USER,
+        password=DB_PASSWORD,
+    )
+    conn.autocommit = True
+
+    try:
+        with conn.cursor() as cur:
+            for table_name in ("silver.trips", "bronze.rejected_trips"):
+                try:
+                    cur.execute(
+                        """
+                        SELECT 1
+                        FROM information_schema.columns
+                        WHERE table_schema = %s
+                          AND table_name = %s
+                          AND column_name = 'source_year_month'
+                        """,
+                        tuple(table_name.split(".", 1)),
+                    )
+                    has_source_column = cur.fetchone() is not None
+
+                    cur.execute(f"ALTER TABLE {table_name} ADD COLUMN IF NOT EXISTS source_year_month TEXT")
+                    if not has_source_column:
+                        cur.execute(f"DELETE FROM {table_name} WHERE source_year_month IS NULL")
+                        print(f"linhas legadas sem lote removidas de {table_name}: {cur.rowcount}")
+
+                    cur.execute(
+                        f"DELETE FROM {table_name} WHERE source_year_month = %s",
+                        (source_year_month,),
+                    )
+                    print(f"lote {source_year_month} removido de {table_name}: {cur.rowcount} linhas")
+                except psycopg2.errors.UndefinedTable:
+                    print(f"{table_name}  nao existe seguindo com primeira carga")
+    finally:
+        conn.close()
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
