@@ -67,29 +67,39 @@ proj_aquila/
 
 ### Iniciando o ambiente
 
-1. **Suba os containers:**
+1. **Configure as variáveis de ambiente:**
+   ```bash
+   cp .env.example .env
+   ```
+
+   Ajuste o arquivo `.env` se quiser usar outros usuários, senhas ou nomes de banco. O arquivo `.env` é local de cada pessoa e não deve ser versionado.
+
+2. **Suba os containers:**
    ```bash
    docker compose up --build -d
    ```
 
-2. **Acesse o Airflow:**
+3. **Acesse o Airflow:**
    - **URL**: [http://localhost:8080](http://localhost:8080)
-   - **Usuário**: `admin`
-   - **Senha**: `admin`
+   - **Usuário**: valor de `_AIRFLOW_WWW_USER_USERNAME` no `.env` (padrão: `admin`)
+   - **Senha**: valor de `_AIRFLOW_WWW_USER_PASSWORD` no `.env` (padrão: `admin`)
 
-3. **Ative a DAG** `tlc_yellow_taxi_pipeline` clicando no toggle.
+4. **Ative a DAG** `tlc_yellow_taxi_pipeline` clicando no toggle.
 
-4. **Execute o pipeline** para cada mês desejado (mínimo 6 meses):
+5. **Execute o pipeline** para cada mês desejado (mínimo 6 meses):
    - Clique em **"Trigger DAG w/ config"**
    - Informe os parâmetros: `{"year": "2025", "month": "1"}`
    - Repita para os meses 1 a 6
 
-5. **Acesse o banco de dados** pelo DBeaver ou terminal:
+6. **Acesse o banco de dados** pelo DBeaver ou terminal:
    - **Host**: `localhost` | **Porta**: `5432`
-   - **Banco**: `ny_taxi` | **Usuário**: `postgres` | **Senha**: `postgres`
+   - **Banco**: valor de `NY_TAXI_DB_NAME` no `.env` (padrão: `ny_taxi`)
+   - **Usuário**: valor de `POSTGRES_USER` no `.env` (padrão: `postgres`)
+   - **Senha**: valor de `POSTGRES_PASSWORD` no `.env` (padrão: `postgres`)
    ```bash
    docker compose exec postgres psql -U postgres -d ny_taxi
    ```
+   Se você alterou `POSTGRES_USER` ou `NY_TAXI_DB_NAME` no `.env`, use esses mesmos valores no comando acima.
 
 ### Parando o ambiente
 ```bash
@@ -123,17 +133,23 @@ pip install -r requirements.txt
 ```
 *(Recomenda-se utilizar um ambiente virtual Python, como `venv` ou `conda`, para evitar conflito com outras dependências globais).*
 
-### Passo 3: Credenciais de Acesso (Conexão Hardcoded)
-O notebook está configurado para acessar o banco de dados rodando no Docker localhost usando a seguinte URI de conexão hardcoded:
-```python
-engine = sqlalchemy.create_engine('postgresql://postgres:postgres@localhost:5432/ny_taxi')
+### Passo 3: Credenciais de Acesso
+O notebook lê automaticamente o arquivo `.env` da raiz do projeto e usa as variáveis:
+
+```text
+POSTGRES_USER
+POSTGRES_PASSWORD
+NY_TAXI_DB_NAME
 ```
+
+Se o `.env` não existir, o notebook usa os valores padrão do `.env.example`:
+
+```text
+postgresql://postgres:postgres@localhost:5432/ny_taxi
+```
+
 * **Host**: `localhost`
 * **Porta**: `5432`
-* **Usuário**: `postgres`
-* **Senha**: `postgres`
-
-Se você alterou a senha do usuário `postgres` no arquivo `.env` para rodar os containers, certifique-se de atualizar a senha correspondente na primeira célula de código do notebook.
 
 ### Passo 4: Executar o Servidor Jupyter
 Inicie o Jupyter Notebook executando o comando a partir do terminal na raiz do projeto:
