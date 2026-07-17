@@ -29,6 +29,10 @@ services:
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-change_me}
       - POSTGRES_MULTIPLE_DATABASES=${AIRFLOW_DB_NAME:-airflow},${NY_TAXI_DB_NAME:-ny_taxi}
+      - AIRFLOW_DB_USER=${AIRFLOW_DB_USER:-airflow}
+      - AIRFLOW_DB_PASSWORD=${AIRFLOW_DB_PASSWORD:-change_me}
+      - AIRFLOW_DB_NAME=${AIRFLOW_DB_NAME:-airflow}
+      - NY_TAXI_DB_NAME=${NY_TAXI_DB_NAME:-ny_taxi}
     ports:
       - "5432:5432"
     volumes:

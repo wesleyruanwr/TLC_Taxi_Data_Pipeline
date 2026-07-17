@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 set -e
 
 AIRFLOW_DB_USER="${AIRFLOW_DB_USER:-airflow}"
