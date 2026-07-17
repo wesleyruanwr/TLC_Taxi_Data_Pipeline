@@ -4,6 +4,11 @@ from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql.types import StringType, BooleanType
 
+# credenciais lidas do ambiente (injetadas via docker-compose a partir do .env)
+DB_USER     = os.environ.get("POSTGRES_USER", "postgres")
+DB_PASSWORD = os.environ.get("POSTGRES_PASSWORD", "postgres")
+DB_NAME     = os.environ.get("NY_TAXI_DB_NAME", "ny_taxi")
+
 def process_silver(year, month):
     month_str = f"{int(month):02d}"
     filename = f"yellow_tripdata_{year}-{month_str}.parquet"
@@ -38,14 +43,14 @@ def process_silver(year, month):
     errors_expr = F.array([
         F.when(F.col("trip_duration_minutes") > 360, "anomaly_duration_gt_6h"),  # duração > 6h (360 min) = anomalia
         F.when(F.col("trip_distance") > 100, "anomaly_distance_gt_100mi"),  # distancia > 100 milhas = anomalia
-        F.when(~F.col("payment_type").isin(1, 2), "invalid_payment_type"), #datas inconsistentes (dropoff antes de pickup)
-        F.when(F.col("tpep_dropoff_datetime") <= F.col("tpep_pickup_datetime"), "invalid_dates_dropoff_before_pickup"),  #pagamento inválido (nao é 1 ou 2)
-        F.when(F.col("trip_distance") < 0, "negative_distance"), # distancia negativa ou valor negativo
-        F.when(F.col("total_amount") < 0, "negative_total_amount"), # valor total negativo
-        F.when(F.col("passenger_count").isNull() | (F.col("passenger_count") <= 0) | (F.col("passenger_count") > 8), "invalid_passenger_count"), # quant passageiros menor/igual a 0 ou maior que 8
-        F.when(F.col("RatecodeID").isNull() | ~F.col("RatecodeID").between(1, 6), "invalid_ratecode_id"), # ID de tarifa fora das mapeadas pela TLC (1 a 6
-        F.when(F.col("PULocationID").isNull() | ~F.col("PULocationID").between(1, 265), "invalid_pickup_location"), # local de embarque invalido (TLC Zone IDs vão de 1 a 265)
-        F.when(F.col("DOLocationID").isNull() | ~F.col("DOLocationID").between(1, 265), "invalid_dropoff_location") # local de desembarque inválido (fora do intervalo 1 a 265)
+        F.when(~F.col("payment_type").isin(1, 2), "invalid_payment_type"),  # pagamento inválido (nao é 1 ou 2)
+        F.when(F.col("tpep_dropoff_datetime") <= F.col("tpep_pickup_datetime"), "invalid_dates_dropoff_before_pickup"),  # datas inconsistentes (dropoff antes de pickup)
+        F.when(F.col("trip_distance") < 0, "negative_distance"),  # distancia negativa
+        F.when(F.col("total_amount") < 0, "negative_total_amount"),  # valor total negativo
+        F.when(F.col("passenger_count").isNull() | (F.col("passenger_count") <= 0) | (F.col("passenger_count") > 8), "invalid_passenger_count"),  # quant passageiros menor/igual a 0 ou maior que 8
+        F.when(F.col("RatecodeID").isNull() | ~F.col("RatecodeID").between(1, 6), "invalid_ratecode_id"),  # ID de tarifa fora das mapeadas pela TLC (1 a 6)
+        F.when(F.col("PULocationID").isNull() | ~F.col("PULocationID").between(1, 265), "invalid_pickup_location"),  # local de embarque invalido (TLC Zone IDs vão de 1 a 265)
+        F.when(F.col("DOLocationID").isNull() | ~F.col("DOLocationID").between(1, 265), "invalid_dropoff_location")  # local de desembarque inválido (fora do intervalo 1 a 265)
     ])
     
     # remover nulos do array de erros e concatenar
@@ -88,10 +93,10 @@ def process_silver(year, month):
     )
 
     
-    db_url = "jdbc:postgresql://postgres:5432/ny_taxi"
+    db_url = f"jdbc:postgresql://postgres:5432/{DB_NAME}"
     db_properties = {
-        "user": "postgres",
-        "password": "postgres",
+        "user": DB_USER,
+        "password": DB_PASSWORD,
         "driver": "org.postgresql.Driver"
     }
 

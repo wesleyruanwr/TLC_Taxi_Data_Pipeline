@@ -35,7 +35,7 @@ proj_aquila/
 ├── scripts/
 │   ├── download_data.py          # Módulo Python - ingestão Bronze
 │   ├── process_silver.py         # Job PySpark - processamento Silver
-│   └── read_parquet_csv.py       # Utilitário para exportar parquet → CSV
+│   └── patch_notebook.py         # Utilitário: ajusta credenciais do notebook via .env
 ├── dbt_project/
 │   ├── dbt_project.yml           # Configuração do projeto dbt
 │   ├── profiles.yml              # Conexão do dbt com PostgreSQL
@@ -53,8 +53,8 @@ proj_aquila/
 ├── docker-compose.yml            # Serviços: PostgreSQL, Airflow
 ├── Dockerfile                    # Imagem customizada do Airflow com Java, PySpark, dbt
 ├── init-db.sh                    # Script de inicialização dos bancos no PostgreSQL
-├── dashboard.py                  # Dashboard Streamlit para visualização da Gold
-├── analise_ny_taxi.ipynb         # Jupyter Notebook para análise exploratória
+├── notebooks/
+│   └── analise_ny_taxi.ipynb     # Jupyter Notebook para análise exploratória
 └── README.md                     # Este arquivo
 ```
 

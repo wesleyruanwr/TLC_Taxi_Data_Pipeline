@@ -9,6 +9,10 @@ x-airflow-common: &airflow-common
     - AIRFLOW__CORE__LOAD_EXAMPLES=False
     - AIRFLOW__CORE__FERNET_KEY=cryptography_fernet_key_is_not_needed_for_simple_runs=
     - AIRFLOW__WEBSERVER__EXPOSE_CONFIG=True
+    # credenciais do banco de dados lidas do .env — sem hardcode
+    - POSTGRES_USER=${POSTGRES_USER:-postgres}
+    - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+    - NY_TAXI_DB_NAME=${NY_TAXI_DB_NAME:-ny_taxi}
   volumes:
     - ./dags:/opt/airflow/dags
     - ./scripts:/opt/airflow/scripts

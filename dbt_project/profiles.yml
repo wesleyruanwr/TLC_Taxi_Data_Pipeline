@@ -5,9 +5,10 @@ ny_taxi_profile:
       type: postgres
       host: postgres
       port: 5432
-      user: postgres
-      password: postgres
-      dbname: ny_taxi
+      # credenciais lidas das variaveis de ambiente (injetadas via docker-compose a partir do .env)
+      user: "{{ env_var('POSTGRES_USER', 'postgres') }}"
+      password: "{{ env_var('POSTGRES_PASSWORD', 'postgres') }}"
+      dbname: "{{ env_var('NY_TAXI_DB_NAME', 'ny_taxi') }}"
       schema: public
       threads: 4
       keepalives_idle: 0
