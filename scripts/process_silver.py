@@ -33,39 +33,31 @@ def process_silver(year, month):
     df = df.withColumn("trip_duration_minutes", 
                        (F.unix_timestamp("tpep_dropoff_datetime") - F.unix_timestamp("tpep_pickup_datetime")) / 60.0)
 
+    # regras de qualidade e sinalizacoes que vao ser criadas
 
-
-    # regras de qualidade e sinalizacoes
-
-    # duração > 6h (360 min) = anomalia / distancia > 100 milhas = anomalia / datas inconsistentes (dropoff antes de pickup)
-    # pagamento inválido (nao é 1 ou 2) = receita inválida ou tipo inválido / distancia negativa ou valor negativo
-    # quant passageiros menor/igual a 0 ou maior que 8 / ID de tarifa fora das mapeadas pela TLC (1 a 6
-    #local de embarque invalido (TLC Zone IDs vão de 1 a 265) / local de desembarque inválido (fora do intervalo 1 a 265)
-    
-    
     errors_expr = F.array([
-        F.when(F.col("trip_duration_minutes") > 360, "anomaly_duration_gt_6h"),
-        F.when(F.col("trip_distance") > 100, "anomaly_distance_gt_100mi"),
-        F.when(~F.col("payment_type").isin(1, 2), "invalid_payment_type"),
-        F.when(F.col("tpep_dropoff_datetime") <= F.col("tpep_pickup_datetime"), "invalid_dates_dropoff_before_pickup"),
-        F.when(F.col("trip_distance") < 0, "negative_distance"),
-        F.when(F.col("total_amount") < 0, "negative_total_amount"),
-        F.when(F.col("passenger_count").isNull() | (F.col("passenger_count") <= 0) | (F.col("passenger_count") > 8), "invalid_passenger_count"),
-        F.when(F.col("RatecodeID").isNull() | ~F.col("RatecodeID").between(1, 6), "invalid_ratecode_id"),
-        F.when(F.col("PULocationID").isNull() | ~F.col("PULocationID").between(1, 265), "invalid_pickup_location"),
-        F.when(F.col("DOLocationID").isNull() | ~F.col("DOLocationID").between(1, 265), "invalid_dropoff_location")
+        F.when(F.col("trip_duration_minutes") > 360, "anomaly_duration_gt_6h"),  # duração > 6h (360 min) = anomalia
+        F.when(F.col("trip_distance") > 100, "anomaly_distance_gt_100mi"),  # distancia > 100 milhas = anomalia
+        F.when(~F.col("payment_type").isin(1, 2), "invalid_payment_type"), #datas inconsistentes (dropoff antes de pickup)
+        F.when(F.col("tpep_dropoff_datetime") <= F.col("tpep_pickup_datetime"), "invalid_dates_dropoff_before_pickup"),  #pagamento inválido (nao é 1 ou 2)
+        F.when(F.col("trip_distance") < 0, "negative_distance"), # distancia negativa ou valor negativo
+        F.when(F.col("total_amount") < 0, "negative_total_amount"), # valor total negativo
+        F.when(F.col("passenger_count").isNull() | (F.col("passenger_count") <= 0) | (F.col("passenger_count") > 8), "invalid_passenger_count"), # quant passageiros menor/igual a 0 ou maior que 8
+        F.when(F.col("RatecodeID").isNull() | ~F.col("RatecodeID").between(1, 6), "invalid_ratecode_id"), # ID de tarifa fora das mapeadas pela TLC (1 a 6
+        F.when(F.col("PULocationID").isNull() | ~F.col("PULocationID").between(1, 265), "invalid_pickup_location"), # local de embarque invalido (TLC Zone IDs vão de 1 a 265)
+        F.when(F.col("DOLocationID").isNull() | ~F.col("DOLocationID").between(1, 265), "invalid_dropoff_location") # local de desembarque inválido (fora do intervalo 1 a 265)
     ])
     
     # remover nulos do array de erros e concatenar
-    df = df.withColumn("invalid_reasons_arr", F.array_remove(errors_expr, None))
+    df = df.withColumn("invalid_reasons_arr", F.array_compact(errors_expr))
     df = df.withColumn("invalid_reason", 
                        F.when(F.size("invalid_reasons_arr") > 0, F.array_join("invalid_reasons_arr", "; "))
                        .otherwise(F.lit(None).cast(StringType())))
     
-    # se houver erro no array is_valid_trip = False
+    # Se houver qualquer erro no array valid_trip = False
     df = df.withColumn("is_valid_trip", F.when(F.size("invalid_reasons_arr") > 0, False).otherwise(True))
     
-    # drop coluna temp
+    # Drop coluna temporária
     df = df.drop("invalid_reasons_arr")
 
     silver_df = df.select(
@@ -103,13 +95,25 @@ def process_silver(year, month):
         "driver": "org.postgresql.Driver"
     }
 
-    print("gravando dados no PostgreSQL (tabela: silver.trips)")
+    valid_df = silver_df.filter(F.col("is_valid_trip") == True)
+    invalid_df = silver_df.filter(F.col("is_valid_trip") == False)
+
+    print(f"gravando dados no PostgreSQL: validando e separando...")
+    print(f" - Gravando viagens válidas em silver.trips")
+    print(f" - Gravando viagens rejeitadas em bronze.rejected_trips")
     
     try:
-        silver_df.write \
+        # Grava apenas as válidas na Silver
+        valid_df.write \
             .mode("append") \
             .jdbc(url=db_url, table="silver.trips", properties=db_properties)
-        print(f"processamento foiconcluido com sucesso para o lote {year}-{month_str}!")
+            
+        # Grava as rejeitadas na Bronze para postergar análise de erros
+        invalid_df.write \
+            .mode("append") \
+            .jdbc(url=db_url, table="bronze.rejected_trips", properties=db_properties)
+            
+        print(f"processamento foi concluido com sucesso para o lote {year}-{month_str}!")
     except Exception as e:
         print(f"erro ao gravar no PostgreSQL: {e}")
         raise e
