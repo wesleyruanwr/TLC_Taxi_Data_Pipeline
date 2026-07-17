@@ -1,0 +1,80 @@
+version: '3.8'
+
+x-airflow-common: &airflow-common
+  build: .
+  environment:
+    - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+    - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+    - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+    - AIRFLOW__CORE__LOAD_EXAMPLES=False
+    - AIRFLOW__CORE__FERNET_KEY=cryptography_fernet_key_is_not_needed_for_simple_runs=
+    - AIRFLOW__WEBSERVER__EXPOSE_CONFIG=True
+  volumes:
+    - ./dags:/opt/airflow/dags
+    - ./scripts:/opt/airflow/scripts
+    - ./dbt_project:/opt/airflow/dbt_project
+    - ./data:/opt/airflow/data
+  depends_on:
+    postgres:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_MULTIPLE_DATABASES=airflow,ny_taxi
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  airflow-init:
+    <<: *airflow-common
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+      - _AIRFLOW_DB_UPGRADE=true
+      - _AIRFLOW_WWW_USER_CREATE=true
+      - _AIRFLOW_WWW_USER_USERNAME=${_AIRFLOW_WWW_USER_USERNAME:-admin}
+      - _AIRFLOW_WWW_USER_PASSWORD=${_AIRFLOW_WWW_USER_PASSWORD:-admin}
+      - _AIRFLOW_WWW_USER_EMAIL=${_AIRFLOW_WWW_USER_EMAIL:-admin@example.com}
+      - _AIRFLOW_WWW_USER_FIRSTNAME=${_AIRFLOW_WWW_USER_FIRSTNAME:-admin}
+      - _AIRFLOW_WWW_USER_LASTNAME=${_AIRFLOW_WWW_USER_LASTNAME:-admin}
+      - _AIRFLOW_WWW_USER_ROLE=${_AIRFLOW_WWW_USER_ROLE:-Admin}
+    user: "0:0"
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        airflow db init
+        airflow users create \
+          --username "${_AIRFLOW_WWW_USER_USERNAME}" \
+          --firstname "${_AIRFLOW_WWW_USER_FIRSTNAME}" \
+          --lastname "${_AIRFLOW_WWW_USER_LASTNAME}" \
+          --role "${_AIRFLOW_WWW_USER_ROLE}" \
+          --email "${_AIRFLOW_WWW_USER_EMAIL}" \
+          --password "${_AIRFLOW_WWW_USER_PASSWORD}"
+
+  airflow-webserver:
+    <<: *airflow-common
+    command: webserver
+    ports:
+      - "8080:8080"
+    restart: always
+
+  airflow-scheduler:
+    <<: *airflow-common
+    command: scheduler
+    restart: always
+
+volumes:
+  postgres_data:
