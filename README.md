@@ -34,8 +34,7 @@ proj_aquila/
 │   └── taxi_pipeline.py          # DAG do Airflow para orquestração
 ├── scripts/
 │   ├── download_data.py          # Módulo Python - ingestão Bronze
-│   ├── process_silver.py         # Job PySpark - processamento Silver
-│   └── read_parquet_csv.py       # Utilitário para exportar parquet → CSV
+│   └── process_silver.py         # Job PySpark - processamento Silver
 ├── dbt_project/
 │   ├── dbt_project.yml           # Configuração do projeto dbt
 │   ├── profiles.yml              # Conexão do dbt com PostgreSQL
@@ -53,8 +52,8 @@ proj_aquila/
 ├── docker-compose.yml            # Serviços: PostgreSQL, Airflow
 ├── Dockerfile                    # Imagem customizada do Airflow com Java, PySpark, dbt
 ├── init-db.sh                    # Script de inicialização dos bancos no PostgreSQL
-├── dashboard.py                  # Dashboard Streamlit para visualização da Gold
-├── analise_ny_taxi.ipynb         # Jupyter Notebook para análise exploratória
+├── notebooks/
+│   └── analise_ny_taxi.ipynb     # Jupyter Notebook para análise exploratória
 └── README.md                     # Este arquivo
 ```
 
@@ -106,27 +105,50 @@ docker compose down -v
 
 ## Análise Exploratória (Jupyter Notebook)
 
-O projeto inclui um notebook de análise exploratória (`analise_ny_taxi.ipynb`) que se conecta ao banco PostgreSQL e gera visualizações sobre os dados da camada Gold.
+O projeto inclui um notebook de análise exploratória (`analise_ny_taxi.ipynb`) localizado em `notebooks/analise_ny_taxi.ipynb` que se conecta diretamente ao banco PostgreSQL para gerar gráficos e análises estatísticas baseadas nos dados consolidados das camadas **Silver** e **Gold**.
 
-### Pré-requisitos
-- Python 3.11+ instalado na máquina local
-- Banco de dados PostgreSQL rodando via Docker (porta 5432 exposta)
+Abaixo está o passo a passo completo para executar a análise localmente:
 
-### Instalação das dependências
+### Passo 1: Subir a Infraestrutura (Docker)
+Antes de abrir o notebook, garanta que o banco de dados PostgreSQL esteja ativo e com a porta 5432 liberada para a máquina local:
+```bash
+docker compose up -d
+```
+*Certifique-se de que a DAG do Airflow `tlc_yellow_taxi_pipeline` já tenha sido executada pelo menos uma vez para que as tabelas nas camadas `silver` e `gold` contenham dados.*
 
+### Passo 2: Configurar o Ambiente Python na Máquina Local
+Abra o terminal na pasta raiz do projeto e instale as dependências listadas no `requirements.txt`:
 ```bash
 pip install -r requirements.txt
 ```
+*(Recomenda-se utilizar um ambiente virtual Python, como `venv` ou `conda`, para evitar conflito com outras dependências globais).*
 
-### Executando o Jupyter Notebook
-
-```bash
-jupyter notebook analise_ny_taxi.ipynb
+### Passo 3: Credenciais de Acesso (Conexão Hardcoded)
+O notebook está configurado para acessar o banco de dados rodando no Docker localhost usando a seguinte URI de conexão hardcoded:
+```python
+engine = sqlalchemy.create_engine('postgresql://postgres:postgres@localhost:5432/ny_taxi')
 ```
+* **Host**: `localhost`
+* **Porta**: `5432`
+* **Usuário**: `postgres`
+* **Senha**: `postgres`
 
-O navegador vai abrir automaticamente com o notebook, se n'ao abrir acesse a URL indicada no terminal (geralmente [http://localhost:8888](http://localhost:8888)). Execute todas as células sequencialmente para gerar os gráficos e análises.
+Se você alterou a senha do usuário `postgres` no arquivo `.env` para rodar os containers, certifique-se de atualizar a senha correspondente na primeira célula de código do notebook.
 
-> **Nota**: O notebook se conecta ao PostgreSQL em `localhost:5432`. Certifique-se de que os containers Docker estejam rodando (`docker compose up -d`) e que a DAG já tenha sido executada com sucesso para que existam dados nas tabelas.
+### Passo 4: Executar o Servidor Jupyter
+Inicie o Jupyter Notebook executando o comando a partir do terminal na raiz do projeto:
+```bash
+jupyter notebook notebooks/analise_ny_taxi.ipynb
+```
+O servidor Jupyter será iniciado e uma nova janela do seu navegador será aberta automaticamente com o notebook aberto. Se não abrir automaticamente, copie o link gerado no terminal (geralmente contendo `http://127.0.0.1:8888/?token=...`) e cole-o no seu navegador.
+
+### Passo 5: Executar as Células do Notebook
+No menu superior do Jupyter, clique em **Cell** -> **Run All** (ou execute célula por célula com `Shift + Enter`) para:
+1. Conectar ao PostgreSQL.
+2. Gerar volumetria comparativa entre viagens válidas e rejeitadas.
+3. Exibir os motivos de invalidação mais frequentes.
+4. Listar e plotar os tipos de pagamento mais usados.
+5. Renderizar gráficos de distribuição de distância e ticket médio.
 
 ---
 
