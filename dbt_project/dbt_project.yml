@@ -1,0 +1,15 @@
+name: 'ny_taxi_gold'
+version: '1.0.0'
+config-version: 2
+
+profile: 'ny_taxi_profile'
+
+model-paths: ["models"]
+macro-paths: ["macros"]
+
+models:
+  ny_taxi_gold:
+    # config padrão de escrita direta na Gold
+    gold:
+      +materialized: table
+      +schema: gold

@@ -1,0 +1,13 @@
+ny_taxi_profile:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: postgres
+      port: 5432
+      user: postgres
+      password: postgres
+      dbname: ny_taxi
+      schema: public
+      threads: 4
+      keepalives_idle: 0
