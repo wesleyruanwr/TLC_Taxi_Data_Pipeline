@@ -166,6 +166,10 @@ Inicie o Jupyter Notebook executando o comando a partir do terminal na raiz do p
 ```bash
 jupyter notebook notebooks/analise_ny_taxi.ipynb
 ```
+Ou
+```bash
+python -m jupyter notebook notebooks/analise_ny_taxi.ipynb
+```
 O servidor Jupyter será iniciado e uma nova janela do seu navegador será aberta automaticamente com o notebook aberto. Se não abrir automaticamente, copie o link gerado no terminal (geralmente contendo `http://127.0.0.1:8888/?token=...`) e cole-o no seu navegador.
 
 ### Passo 5: Executar as Células do Notebook
