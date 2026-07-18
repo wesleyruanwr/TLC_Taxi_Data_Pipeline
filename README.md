@@ -74,7 +74,7 @@ proj_aquila/
    cp .env.example .env
    ```
 
-   Ajuste o arquivo `.env` se quiser usar outros usuários, senhas ou nomes de banco. O arquivo `.env` é local de cada pessoa e não deve ser versionado.
+   Ajuste o arquivo `.env` se quiser usar outros usuários, senhas ou nomes de banco
 
 2. **Suba os containers:**
    ```bash
@@ -86,7 +86,7 @@ proj_aquila/
    - **Usuário**: valor de `_AIRFLOW_WWW_USER_USERNAME` no `.env` (padrão: `admin`)
    - **Senha**: valor de `_AIRFLOW_WWW_USER_PASSWORD` no `.env` (padrão: `admin`)
 
-4. **Ative a DAG** `tlc_yellow_taxi_pipeline` clicando no toggle.
+4. **Ative a DAG** `tlc_yellow_taxi_pipeline`
 
 5. **Execute o pipeline para pelo menos 6 meses:**
    - Clique em **"Trigger DAG w/ config"**
@@ -97,7 +97,7 @@ proj_aquila/
    - Com esses parâmetros, uma única execução baixa e processa os meses de janeiro a junho de 2025.
    - Para outra faixa, altere `start_month` e `end_month`.
 
-   A DAG também fica agendada semanalmente (`@weekly`). As recargas são idempotentes por lote mensal (`source_year_month`), evitando duplicidade quando a mesma faixa for executada novamente.
+   A DAG também fica agendada semanalmente (`@weekly`) as recargas são idempotentes por lote mensal (`source_year_month`), evitando duplicidade quando a mesma faixa for executada novamente.
 
 6. **Acesse o banco de dados** pelo DBeaver ou terminal:
    - **Host**: `localhost` | **Porta**: `5432`
@@ -123,11 +123,11 @@ docker compose down -v
 
 ## Análise Exploratória (Jupyter Notebook)
 
-O projeto inclui um notebook de análise exploratória (`analise_ny_taxi.ipynb`) localizado em `notebooks/analise_ny_taxi.ipynb` que se conecta diretamente ao banco PostgreSQL para gerar gráficos e análises estatísticas baseadas nos dados consolidados das camadas **Silver** e **Gold**.
+O projeto tem um notebook de análise exploratória (`analise_ny_taxi.ipynb`) localizado em `notebooks/analise_ny_taxi.ipynb` que se conecta diretamente ao banco PostgreSQL para gerar gráficos e análises estatísticas baseadas nos dados consolidados das camadas **Silver** e **Gold**.
 
 Abaixo está o passo a passo completo para executar a análise localmente:
 
-### Passo 1: Subir a Infraestrutura (Docker)
+### Passo 1: Subir a Infra (Docker)
 Antes de abrir o notebook, garanta que o banco de dados PostgreSQL esteja ativo e com a porta 5432 liberada para a máquina local:
 ```bash
 docker compose up -d
@@ -139,7 +139,6 @@ Abra o terminal na pasta raiz do projeto e instale as dependências listadas no 
 ```bash
 pip install -r requirements.txt
 ```
-*(Recomenda-se utilizar um ambiente virtual Python, como `venv` ou `conda`, para evitar conflito com outras dependências globais).*
 
 ### Passo 3: Credenciais de Acesso
 O notebook lê automaticamente o arquivo `.env` da raiz do projeto e usa as variáveis:
@@ -150,7 +149,7 @@ POSTGRES_PASSWORD
 NY_TAXI_DB_NAME
 ```
 
-Se o `.env` não existir, o notebook usa os valores padrão do `.env.example`:
+Se não tiver `.env`  o notebook usa os valores padrão do `.env.example`:
 
 ```text
 postgresql://postgres:postgres@localhost:5432/ny_taxi
@@ -159,7 +158,7 @@ postgresql://postgres:postgres@localhost:5432/ny_taxi
 * **Host**: `localhost`
 * **Porta**: `5432`
 
-> **Execução local dos scripts (fora do Docker):** `download_data.py` e `process_silver.py` conectam por padrão ao host `postgres` (nome do serviço no Docker Compose). Para rodá-los direto na máquina, exporte `DB_HOST=localhost` (e, se necessário, `DB_PORT`) antes de executar.
+> **Execução local dos scripts (fora do Docker):** `download_data.py` e `process_silver.py` conectam por padrão ao host `postgres` (nome do serviço no Docker Compose). Para rodá-los direto na máquina tem q exportar `DB_HOST=localhost` e se preciso o `DB_PORT`) antes de executar.
 
 ### Passo 4: Executar o Servidor Jupyter
 Inicie o Jupyter Notebook executando o comando a partir do terminal na raiz do projeto:
@@ -170,10 +169,10 @@ Ou
 ```bash
 python -m jupyter notebook notebooks/analise_ny_taxi.ipynb
 ```
-O servidor Jupyter será iniciado e uma nova janela do seu navegador será aberta automaticamente com o notebook aberto. Se não abrir automaticamente, copie o link gerado no terminal (geralmente contendo `http://127.0.0.1:8888/?token=...`) e cole-o no seu navegador.
+O servidor Jupyter será iniciado e uma nova janela do seu navegador será aberta automaticamente com o notebook aberto. Se não abrir automaticamente copie o link gerado no terminal (geralmente contendo `http://127.0.0.1:8888/?token=...`) e cole no  navegador
 
 ### Passo 5: Executar as Células do Notebook
-No menu superior do Jupyter, clique em **Cell** -> **Run All** (ou execute célula por célula com `Shift + Enter`) para:
+No menu do Jupyter clicar em **Cell** -> **Run All** (ou `Shift + Enter`) para:
 1. Conectar ao PostgreSQL.
 2. Gerar volumetria comparativa entre viagens válidas e rejeitadas.
 3. Exibir os motivos de invalidação mais frequentes.
@@ -257,8 +256,6 @@ Dados tratados pelo PySpark com colunas calculadas de qualidade e temporais. **T
 | 7 | `invalid_ratecode_id` | Código de tarifa fora do escopo válido (1 a 6) |
 | 8 | `invalid_pickup_location` | ID do local de embarque fora do mapeamento da TLC (1 a 265) |
 | 9 | `invalid_dropoff_location` | ID do local de desembarque fora do mapeamento da TLC (1 a 265) |
-
-> **Nota:** a validade do *pagamento* (`payment_type` 3–6: No charge, Dispute, Unknown, Voided) **não** entra em `is_valid_trip` — isso é um conceito de **receita**, não de anomalia de qualidade, e é tratado na camada Gold via `dim_payment_types.is_valid_payment`. Assim, uma corrida legítima paga como "No charge" continua sendo `is_valid_trip=true` e conta no volume total, apenas não soma em receita válida.
 
 ---
 
@@ -383,6 +380,6 @@ View materializada com indicadores mensais agregados.
 | month_yyyymm | string | Competência mensal no formato yyyyMM |
 | vendor_id | int | Código do provedor |
 | total_rides | long | Total de corridas no mês (todas as corridas da competência) |
-| total_valid_amount | double | Valor total apenas de pagamentos válidos (`is_valid_payment = true`, ou seja, cartão/dinheiro) |
+| total_valid_amount | double | Valor total apenas de pagamentos válidos (`is_valid_payment = true` ou sej cartão/dinheiro) |
 | avg_ticket_amount | double | Ticket médio, considerando apenas corridas com pagamento válido |
 | avg_distance | double | Distância média das corridas |
