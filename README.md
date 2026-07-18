@@ -186,7 +186,7 @@ Arquivos Parquet brutos baixados diretamente da TLC, sem nenhuma transformação
 
 | Coluna | Tipo | Descrição |
 |--------|------|-----------|
-| VendorID | int | Código do provedor de tecnologia (1 = CMT, 2 = VeriFone) |
+| VendorID | int | Código do provedor de tecnologia (1 = CMT, 2 = Curb/VeriFone, 6 = Myle, 7 = Helix) |
 | tpep_pickup_datetime | timestamp | Data e hora do início da corrida |
 | tpep_dropoff_datetime | timestamp | Data e hora do fim da corrida |
 | passenger_count | long | Número de passageiros informado pelo motorista |
@@ -339,8 +339,10 @@ Tabela dimensão dos provedores de tecnologia dos táxis.
 
 | vendor_id | vendor_description |
 |---|---|
-| 1 | Creative Mobile Technologies (CMT) |
-| 2 | VeriFone Inc. (VTS) |
+| 1 | Creative Mobile Technologies, LLC (CMT) |
+| 2 | Curb Mobility, LLC (ex-VeriFone/VTS) |
+| 6 | Myle Technologies Inc |
+| 7 | Helix |
 
 ---
 
