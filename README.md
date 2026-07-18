@@ -244,20 +244,21 @@ Dados tratados pelo PySpark com colunas calculadas de qualidade e temporais. **T
 | **is_valid_trip** | **boolean** | **Flag indicando se a viagem passou em todas as regras de qualidade** |
 | **invalid_reason** | **string** | **Motivos de invalidação concatenados por "; " (null se válida)** |
 
-**Regras de qualidade aplicadas (10 regras):**
+**Regras de qualidade aplicadas (9 regras):**
 
 | Regra | Flag gerada | Descrição |
 |-------|-------------|-----------|
 | 1 | `anomaly_duration_gt_6h` | Duração superior a 6 horas (360 min) |
 | 2 | `anomaly_distance_gt_100mi` | Distância superior a 100 milhas |
-| 3 | `invalid_payment_type` | Tipo de pagamento diferente de 1 (cartão) ou 2 (dinheiro) |
-| 4 | `invalid_dates_dropoff_before_pickup` | Data de desembarque anterior ou igual à de embarque |
-| 5 | `negative_distance` | Distância negativa |
-| 6 | `negative_total_amount` | Valor total negativo |
-| 7 | `invalid_passenger_count` | Quantidade de passageiros menor/igual a 0 ou maior que 8 (anômalo) |
-| 8 | `invalid_ratecode_id` | Código de tarifa fora do escopo válido (1 a 6) |
-| 9 | `invalid_pickup_location` | ID do local de embarque fora do mapeamento da TLC (1 a 265) |
-| 10 | `invalid_dropoff_location` | ID do local de desembarque fora do mapeamento da TLC (1 a 265) |
+| 3 | `invalid_dates_dropoff_before_pickup` | Data de desembarque anterior ou igual à de embarque |
+| 4 | `negative_distance` | Distância negativa |
+| 5 | `negative_total_amount` | Valor total negativo |
+| 6 | `invalid_passenger_count` | Quantidade de passageiros menor/igual a 0 ou maior que 8 (anômalo) |
+| 7 | `invalid_ratecode_id` | Código de tarifa fora do escopo válido (1 a 6) |
+| 8 | `invalid_pickup_location` | ID do local de embarque fora do mapeamento da TLC (1 a 265) |
+| 9 | `invalid_dropoff_location` | ID do local de desembarque fora do mapeamento da TLC (1 a 265) |
+
+> **Nota:** a validade do *pagamento* (`payment_type` 3–6: No charge, Dispute, Unknown, Voided) **não** entra em `is_valid_trip` — isso é um conceito de **receita**, não de anomalia de qualidade, e é tratado na camada Gold via `dim_payment_types.is_valid_payment`. Assim, uma corrida legítima paga como "No charge" continua sendo `is_valid_trip=true` e conta no volume total, apenas não soma em receita válida.
 
 ---
 
