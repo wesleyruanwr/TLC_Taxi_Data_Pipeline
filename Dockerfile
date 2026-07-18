@@ -1,11 +1,18 @@
 FROM apache/airflow:2.9.2-python3.11
 
 USER root
-#java 17 pro spark
+#java 17 pro spark 
+# adi curl para baixar o driver na build
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends openjdk-17-jre-headless && \
+    apt-get install -y --no-install-recommends openjdk-17-jre-headless curl && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+# driver jdbc do postgres
+RUN mkdir -p /opt/spark_jars && \
+    curl -fSL https://repo1.maven.org/maven2/org/postgresql/postgresql/42.7.3/postgresql-42.7.3.jar \
+        -o /opt/spark_jars/postgresql-42.7.3.jar && \
+    chown -R airflow: /opt/spark_jars
 
 USER airflow
 # spark dbt e conector do postgres
