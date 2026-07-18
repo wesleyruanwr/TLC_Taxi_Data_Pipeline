@@ -51,8 +51,6 @@ def process_silver(year, month):
     errors_expr = F.array([
         F.when(F.col("trip_duration_minutes") > 360, "anomaly_duration_gt_6h"),  # duração > 6h (360 min) = anomalia
         F.when(F.col("trip_distance") > 100, "anomaly_distance_gt_100mi"),  # distancia > 100 milhas = anomalia
-        # OBS: validade de pagamento (payment_type 3-6) NAO entra em is_valid_trip.
-        # Isso e conceito de RECEITA, tratado na camada gold via dim_payment_types.is_valid_payment.
         F.when(F.col("tpep_dropoff_datetime") <= F.col("tpep_pickup_datetime"), "invalid_dates_dropoff_before_pickup"),  # datas inconsistentes (dropoff antes de pickup)
         F.when(F.col("trip_distance") < 0, "negative_distance"),  # distancia negativa
         F.when(F.col("total_amount") < 0, "negative_total_amount"),  # valor total negativo
