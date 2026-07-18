@@ -23,6 +23,7 @@ SELECT
     "total_amount",
     "congestion_surcharge",
     "Airport_fee" as airport_fee,
+    "source_year_month",
     "pickup_date",
     "pickup_year_month",
     "trip_duration_minutes",
