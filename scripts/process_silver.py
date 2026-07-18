@@ -6,6 +6,8 @@ from pyspark.sql import functions as F
 from pyspark.sql.types import StringType
 
 # credenciais lidas do ambiente
+DB_HOST     = os.environ.get("DB_HOST", "postgres")
+DB_PORT     = os.environ.get("DB_PORT", "5432")
 DB_USER     = os.environ.get("POSTGRES_USER", "postgres")
 DB_PASSWORD = os.environ.get("POSTGRES_PASSWORD", "postgres")
 DB_NAME     = os.environ.get("NY_TAXI_DB_NAME", "ny_taxi")
@@ -97,33 +99,23 @@ def process_silver(year, month):
     )
 
     
-    db_url = f"jdbc:postgresql://postgres:5432/{DB_NAME}"
+    db_url = f"jdbc:postgresql://{DB_HOST}:{DB_PORT}/{DB_NAME}"
     db_properties = {
         "user": DB_USER,
         "password": DB_PASSWORD,
         "driver": "org.postgresql.Driver"
     }
 
-    valid_df = silver_df.filter(F.col("is_valid_trip") == True)
-    invalid_df = silver_df.filter(F.col("is_valid_trip") == False)
+    # anomalias sao sinalizadas nao descartadas
+    print(f"gravando {source_year_month} em silver.trips todas as corridas com flags de qualidade")
 
-    print(f"gravando dados no PostgreSQL: validando e separando...")
-    print(f" - Gravando viagens válidas em silver.trips")
-    print(f" - Gravando viagens rejeitadas em bronze.rejected_trips")
-    
     try:
         delete_existing_batch(source_year_month)
 
-        # Grava apenas as válidas na Silver
-        valid_df.write \
+        silver_df.write \
             .mode("append") \
             .jdbc(url=db_url, table="silver.trips", properties=db_properties)
-            
-        # Grava as rejeitadas na Bronze para postergar análise de erros
-        invalid_df.write \
-            .mode("append") \
-            .jdbc(url=db_url, table="bronze.rejected_trips", properties=db_properties)
-            
+
         print(f"processamento foi concluido com sucesso para o lote {year}-{month_str}!")
     except Exception as e:
         print(f"erro ao gravar no PostgreSQL: {e}")
@@ -133,8 +125,8 @@ def process_silver(year, month):
 
 def delete_existing_batch(source_year_month):
     conn = psycopg2.connect(
-        host="postgres",
-        port=5432,
+        host=DB_HOST,
+        port=DB_PORT,
         dbname=DB_NAME,
         user=DB_USER,
         password=DB_PASSWORD,
@@ -143,7 +135,7 @@ def delete_existing_batch(source_year_month):
 
     try:
         with conn.cursor() as cur:
-            for table_name in ("silver.trips", "bronze.rejected_trips"):
+            for table_name in ("silver.trips",):
                 try:
                     cur.execute(
                         """
