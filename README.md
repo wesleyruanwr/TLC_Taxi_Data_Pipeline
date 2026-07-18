@@ -44,6 +44,8 @@ proj_aquila/
 │       ├── schema.yml            # Sources, testes de qualidade
 │       ├── fct_trips.sql         # Tabela fato de corridas
 │       ├── dim_payment_types.sql # Tabela dimensão de pagamentos
+│       ├── dim_vendors.sql       # Tabela dimensão de provedores
+│       ├── dim_rate_codes.sql    # Tabela dimensão de tipos de tarifa
 │       └── mv_monthly_indicators.sql # View materializada de indicadores
 ├── sql/
 │   └── init.sql                  # DDL: schemas, tabela payment_types, permissões
@@ -86,10 +88,16 @@ proj_aquila/
 
 4. **Ative a DAG** `tlc_yellow_taxi_pipeline` clicando no toggle.
 
-5. **Execute o pipeline** para cada mês desejado (mínimo 6 meses):
+5. **Execute o pipeline para pelo menos 6 meses:**
    - Clique em **"Trigger DAG w/ config"**
-   - Informe os parâmetros: `{"year": "2025", "month": "1"}`
-   - Repita para os meses 1 a 6
+   - Use os parâmetros padrão ou informe:
+     ```json
+     {"year": "2025", "start_month": "1", "end_month": "6"}
+     ```
+   - Com esses parâmetros, uma única execução baixa e processa os meses de janeiro a junho de 2025.
+   - Para outra faixa, altere `start_month` e `end_month`.
+
+   A DAG também fica agendada semanalmente (`@weekly`). As recargas são idempotentes por lote mensal (`source_year_month`), evitando duplicidade quando a mesma faixa for executada novamente.
 
 6. **Acesse o banco de dados** pelo DBeaver ou terminal:
    - **Host**: `localhost` | **Porta**: `5432`
@@ -151,6 +159,8 @@ postgresql://postgres:postgres@localhost:5432/ny_taxi
 * **Host**: `localhost`
 * **Porta**: `5432`
 
+> **Execução local dos scripts (fora do Docker):** `download_data.py` e `process_silver.py` conectam por padrão ao host `postgres` (nome do serviço no Docker Compose). Para rodá-los direto na máquina, exporte `DB_HOST=localhost` (e, se necessário, `DB_PORT`) antes de executar.
+
 ### Passo 4: Executar o Servidor Jupyter
 Inicie o Jupyter Notebook executando o comando a partir do terminal na raiz do projeto:
 ```bash
@@ -198,43 +208,9 @@ Arquivos Parquet brutos baixados diretamente da TLC, sem nenhuma transformação
 
 ---
 
-### Camada Bronze — Tabela `bronze.rejected_trips` (PostgreSQL)
-
-Tabela no banco de dados que armazena todas as corridas que falharam em uma ou mais regras de qualidade de dados. Esta tabela mantém a estrutura original da camada Silver para facilitar auditoria e análise de causa raiz dos erros.
-
-| Coluna | Tipo | Descrição |
-|--------|------|-----------|
-| VendorID | int | Código do provedor de tecnologia |
-| tpep_pickup_datetime | timestamp | Data/hora do início da corrida |
-| tpep_dropoff_datetime | timestamp | Data/hora do fim da corrida |
-| passenger_count | long | Número de passageiros |
-| trip_distance | double | Distância em milhas |
-| RatecodeID | long | Código da tarifa |
-| store_and_fwd_flag | string | Flag de armazenamento offline |
-| PULocationID | int | Zona de embarque |
-| DOLocationID | int | Zona de desembarque |
-| payment_type | long | Tipo de pagamento |
-| fare_amount | double | Valor da tarifa |
-| extra | double | Extras |
-| mta_tax | double | Taxa MTA |
-| tip_amount | double | Gorjeta |
-| tolls_amount | double | Pedágios |
-| improvement_surcharge | double | Sobretaxa de melhoria |
-| total_amount | double | Valor total cobrado |
-| congestion_surcharge | double | Sobretaxa de congestionamento |
-| Airport_fee | double | Taxa de aeroporto |
-| pickup_date | date | Data do embarque |
-| pickup_year_month | string | Competência mensal no formato yyyyMM |
-| trip_duration_minutes | double | Duração da viagem em minutos |
-| **is_valid_trip** | **boolean** | **Sempre False nesta tabela** |
-| **invalid_reason** | **string** | **Código(s) de erro que causaram a rejeição** |
-
----
-
-
 ### Camada Silver — `silver.trips`
 
-Dados tratados pelo PySpark com colunas calculadas de qualidade e temporais.
+Dados tratados pelo PySpark com colunas calculadas de qualidade e temporais. **Todas** as corridas da competência são mantidas (não há descarte): as corridas que falham em alguma regra permanecem na tabela, sinalizadas via `is_valid_trip = false` e `invalid_reason`, permitindo auditoria e análise de causa raiz sem perder a volumetria total do mês.
 
 | Coluna | Tipo | Descrição |
 |--------|------|-----------|
@@ -257,6 +233,7 @@ Dados tratados pelo PySpark com colunas calculadas de qualidade e temporais.
 | total_amount | double | Valor total |
 | congestion_surcharge | double | Sobretaxa de congestionamento |
 | Airport_fee | double | Taxa de aeroporto |
+| **source_year_month** | **string** | **Lote de origem do arquivo processado no formato yyyyMM** |
 | **pickup_date** | **date** | **Data do embarque (derivada de tpep_pickup_datetime)** |
 | **pickup_year_month** | **string** | **Competência mensal no formato yyyyMM** |
 | **trip_duration_minutes** | **double** | **Duração da viagem em minutos** |
@@ -328,6 +305,7 @@ Tabela fato principal gerada pelo dbt a partir da `silver.trips`.
 | total_amount | double | Valor total |
 | congestion_surcharge | double | Sobretaxa de congestionamento |
 | airport_fee | double | Taxa de aeroporto (renomeado de Airport_fee) |
+| source_year_month | string | Lote de origem do arquivo processado no formato yyyyMM |
 | pickup_date | date | Data do embarque |
 | pickup_year_month | string | Competência mensal (yyyyMM) |
 | trip_duration_minutes | double | Duração em minutos |
@@ -397,7 +375,7 @@ View materializada com indicadores mensais agregados.
 |--------|------|-----------|
 | month_yyyymm | string | Competência mensal no formato yyyyMM |
 | vendor_id | int | Código do provedor |
-| total_rides | long | Total de corridas no mês |
-| total_valid_amount | double | Valor total das corridas consideradas válidas |
-| avg_ticket_amount | double | Ticket médio por corrida |
+| total_rides | long | Total de corridas no mês (todas as corridas da competência) |
+| total_valid_amount | double | Valor total apenas de pagamentos válidos (`is_valid_payment = true`, ou seja, cartão/dinheiro) |
+| avg_ticket_amount | double | Ticket médio, considerando apenas corridas com pagamento válido |
 | avg_distance | double | Distância média das corridas |
