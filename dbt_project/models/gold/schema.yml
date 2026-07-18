@@ -22,8 +22,11 @@ sources:
           - name: payment_type
             tests:
               - not_null
+              # a silver retem corridas anomalas sinalizadas
               - accepted_values:
                   values: [1, 2, 3, 4, 5, 6]
+                  config:
+                    severity: warn
           - name: total_amount
             tests:
               - not_null
@@ -32,6 +35,9 @@ sources:
               - not_null
               - accepted_values:
                   values: ['true', 'false']
+          - name: source_year_month
+            tests:
+              - not_null
       - name: payment_types
         columns:
           - name: payment_type
@@ -57,9 +63,12 @@ models:
               field: vendor_id
       - name: rate_code_id
         tests:
+          # corridas anomalas retidas podem ter ratecodeid fora de 1-6 
           - relationships:
               to: ref('dim_rate_codes')
               field: rate_code_id
+              config:
+                severity: warn
       - name: pickup_datetime
         tests:
           - not_null
@@ -72,6 +81,11 @@ models:
           - relationships:
               to: ref('dim_payment_types')
               field: payment_type
+              config:
+                severity: warn
+      - name: source_year_month
+        tests:
+          - not_null
       - name: is_valid_trip
         tests:
           - not_null
