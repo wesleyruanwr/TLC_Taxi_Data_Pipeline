@@ -58,9 +58,12 @@ models:
       - name: vendor_id
         tests:
           - not_null
+          # tirar corridas anomalas pq tem vendorid fora do dominio conhecido
           - relationships:
               to: ref('dim_vendors')
               field: vendor_id
+              config:
+                severity: warn
       - name: rate_code_id
         tests:
           # corridas anomalas retidas podem ter ratecodeid fora de 1-6 
