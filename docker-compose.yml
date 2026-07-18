@@ -1,11 +1,9 @@
-version: '3.8'
-
 x-airflow-common: &airflow-common
   build: .
   environment:
     - AIRFLOW__CORE__EXECUTOR=LocalExecutor
-    - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${AIRFLOW_DB_USER:-airflow}:${AIRFLOW_DB_PASSWORD:-change_me}@postgres/${AIRFLOW_DB_NAME:-airflow}
-    - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${AIRFLOW_DB_USER:-airflow}:${AIRFLOW_DB_PASSWORD:-change_me}@postgres/${AIRFLOW_DB_NAME:-airflow}
+    - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${AIRFLOW_DB_USER:-airflow}:${AIRFLOW_DB_PASSWORD:-airflow}@postgres/${AIRFLOW_DB_NAME:-airflow}
+    - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${AIRFLOW_DB_USER:-airflow}:${AIRFLOW_DB_PASSWORD:-airflow}@postgres/${AIRFLOW_DB_NAME:-airflow}
     - AIRFLOW__CORE__LOAD_EXAMPLES=False
     - AIRFLOW__CORE__FERNET_KEY=cryptography_fernet_key_is_not_needed_for_simple_runs=
     - AIRFLOW__WEBSERVER__EXPOSE_CONFIG=True
@@ -27,10 +25,10 @@ services:
     environment:
       - POSTGRES_DB=${POSTGRES_DB:-postgres}
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-change_me}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
       - POSTGRES_MULTIPLE_DATABASES=${AIRFLOW_DB_NAME:-airflow},${NY_TAXI_DB_NAME:-ny_taxi}
       - AIRFLOW_DB_USER=${AIRFLOW_DB_USER:-airflow}
-      - AIRFLOW_DB_PASSWORD=${AIRFLOW_DB_PASSWORD:-change_me}
+      - AIRFLOW_DB_PASSWORD=${AIRFLOW_DB_PASSWORD:-airflow}
       - AIRFLOW_DB_NAME=${AIRFLOW_DB_NAME:-airflow}
       - NY_TAXI_DB_NAME=${NY_TAXI_DB_NAME:-ny_taxi}
     ports:
@@ -49,11 +47,11 @@ services:
     <<: *airflow-common
     environment:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
-      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${AIRFLOW_DB_USER:-airflow}:${AIRFLOW_DB_PASSWORD:-change_me}@postgres/${AIRFLOW_DB_NAME:-airflow}
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${AIRFLOW_DB_USER:-airflow}:${AIRFLOW_DB_PASSWORD:-airflow}@postgres/${AIRFLOW_DB_NAME:-airflow}
       - _AIRFLOW_DB_UPGRADE=true
       - _AIRFLOW_WWW_USER_CREATE=true
       - _AIRFLOW_WWW_USER_USERNAME=${_AIRFLOW_WWW_USER_USERNAME:-admin}
-      - _AIRFLOW_WWW_USER_PASSWORD=${_AIRFLOW_WWW_USER_PASSWORD:-change_me}
+      - _AIRFLOW_WWW_USER_PASSWORD=${_AIRFLOW_WWW_USER_PASSWORD:-admin}
       - _AIRFLOW_WWW_USER_EMAIL=${_AIRFLOW_WWW_USER_EMAIL:-admin@example.com}
       - _AIRFLOW_WWW_USER_FIRSTNAME=${_AIRFLOW_WWW_USER_FIRSTNAME:-admin}
       - _AIRFLOW_WWW_USER_LASTNAME=${_AIRFLOW_WWW_USER_LASTNAME:-admin}
