@@ -67,6 +67,16 @@ proj_aquila/
 - Docker & Docker Compose instalados
 - Docker Desktop rodando
 
+## Ajuste de permissões em Linux
+Em ambiente Linux antes de subir os containers garanta que o usuario airflow consiga escrever no dbt no diretorio montado:
+
+```bash
+sudo chgrp -R 0 dbt_project
+sudo chmod -R g+rwX dbt_project
+```
+
+Esse ajuste evita erro de permissão no dbt_run logs e target
+
 ### Iniciando o ambiente
 
 1. **Configure as variáveis de ambiente:**
